@@ -168,17 +168,24 @@ gen transaction_value_tot= temp_totcoded/temp_totlocation*temp_value
 
 * Replace percentage share with proportional disbursement amounts
 *XXXXXX Melvin 29.12.2017: @Lennart, what is the purpose of this? Could you comment the steps? e.g. why do disbursemnt count sum up?
+* XXXXXXXXXXX Lennart 30.12.2017: @ Melvin: For each disbursements, we have up to five corresponding sectors (e.g., agriculture, sanitation...).
+* Here I replace the percentage share with the actual corresponding amount (but potentially it is more straightforward to create another variable)
 forvalues g=1(1)5 {
 replace sector`g'pct=sector`g'pct*transaction_value_tot*0.01
 }
 * Sum up disbursement amounts of different purposes as these are ranked by percentage share in total disbursement (e.g., sometimes education might be mjsector1 for a schooling project, but for the next project of a new apprenticeship program only mjsector2)
 foreach g in AX BX CX EX FX JX LX TX WX YX{
+* Generate a zero sectoral disbursementcount as a potential treatment variable
 gen Disbursementcount_`g'=0
 forvalues t=1(1)5 {
 gen aux`t'=0
+* Generate a temp variable, which contains the sectoral disbursement. We have to go through all five shares as ordering differs by project
+* (e.g., sometimes agriculture is main purpose, sometimes not)
 replace aux`t'=sector`t'pct if mjsector`t'code=="`g'"
+* Here we add to the disbursementcount (number of distinct transactions) the disbursements of this specific project if it corresponds to the sector under observation.
 replace Disbursementcount_`g'=Disbursementcount_`g'+Disbursementcount if mjsector`t'code=="`g'"
 }
+* We add up all temporary files as the corresponding sector could rank differently per project
 gen transaction_value_tot_`g'=aux1+aux2+aux3+aux4+aux5
 drop aux*
 }
