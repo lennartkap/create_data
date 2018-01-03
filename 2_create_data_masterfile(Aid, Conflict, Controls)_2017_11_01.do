@@ -82,12 +82,12 @@ import delimited using "$data\Aid\projects_ancillary.csv", clear delimiter(",") 
 *XXXXXX Melvin 29.12.2017: Checked the duplicates. Ok to use duplicates drop
 duplicates drop projectid, force
 save ancillary.dta, replace
-* Import matches from AidData-GADM spatial join
+** Import matches from AidData-GADM spatial join (Needs to be import excel as important information are lost, if delimited (.csv) is used.)
 import excel using "$data\Aid\alg.xls", firstrow clear
 rename project_idC254 projectid
 merge m:1 projectid using ancillary.dta, nogen keep(1 3) //no mismatch from master (melvin 29.12.2017)
 *XXXXXX Melvin 29.12.2017: @Lennart. Is this comment still relevant
-* Needs to be import excel as important information are lost, if delimited (.csv) is used.
+* XXXXXX Lennart 03.01.2018: @ Melvin: Moved it upwards as it is not needed here anymore.
 keep mjsector* sector*pct projectid project_loC254 precision_N100 geoname_idN100 latitudeN1911 longitudeN1911 location_tC254 location_1C254 ISOC3 NAME_0C75  NAME_1C75  NAME_2C75 ID_*
 *XXXXXX Melvin 29.12.2017: destring is not needed anymore
 *destring, dpcomma replace
@@ -168,20 +168,23 @@ gen transaction_value_tot= temp_totcoded/temp_totlocation*temp_value
 
 * Replace percentage share with proportional disbursement amounts
 *XXXXXX Melvin 29.12.2017: @Lennart, what is the purpose of this? Could you comment the steps? e.g. why do disbursemnt count sum up?
+* XXXXX Lennart 03.01.2018: @ Melvin: I now coded it as a tempfile, so the transformation stays more tracable
 forvalues g=1(1)5 {
-replace sector`g'pct=sector`g'pct*transaction_value_tot*0.01
+gen aux`g'pct=sector`g'pct*transaction_value_tot*0.01
 }
 * Sum up disbursement amounts of different purposes as these are ranked by percentage share in total disbursement (e.g., sometimes education might be mjsector1 for a schooling project, but for the next project of a new apprenticeship program only mjsector2)
 foreach g in AX BX CX EX FX JX LX TX WX YX{
 gen Disbursementcount_`g'=0
 forvalues t=1(1)5 {
 gen aux`t'=0
-replace aux`t'=sector`t'pct if mjsector`t'code=="`g'"
+replace aux`t'=aux`t'pct if mjsector`t'code=="`g'"
 replace Disbursementcount_`g'=Disbursementcount_`g'+Disbursementcount if mjsector`t'code=="`g'"
 }
+* XXXX Lennart 03.01.2018: Add all sectoral shares times total disbursement amount up as we need to go through the whole ranking (e.g., sometimes sanitation is the first sector, but sometimes only the fifth).
 gen transaction_value_tot_`g'=aux1+aux2+aux3+aux4+aux5
-drop aux*
+drop aux1 aux2 aux3 aux4 aux5
 }
+drop aux*
 save `i'.dta, replace 
 }
 
